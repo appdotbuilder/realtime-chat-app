@@ -1,11 +1,34 @@
 
+import { db } from '../db';
+import { messagesTable } from '../db/schema';
 import { type GetMessageHistoryInput, type Message } from '../schema';
+import { or, and, eq, desc } from 'drizzle-orm';
 
 export async function getMessageHistory(input: GetMessageHistoryInput): Promise<Message[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is to retrieve message history between two users.
-    // Should return messages ordered by creation date (most recent first).
-    // Should support pagination with limit and offset.
-    // Should include messages in both directions (user1 -> user2 and user2 -> user1).
-    return Promise.resolve([]);
+  try {
+    // Build query to get messages between two users in both directions
+    const results = await db.select()
+      .from(messagesTable)
+      .where(
+        or(
+          and(
+            eq(messagesTable.sender_id, input.user1_id),
+            eq(messagesTable.receiver_id, input.user2_id)
+          ),
+          and(
+            eq(messagesTable.sender_id, input.user2_id),
+            eq(messagesTable.receiver_id, input.user1_id)
+          )
+        )
+      )
+      .orderBy(desc(messagesTable.created_at))
+      .limit(input.limit)
+      .offset(input.offset)
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to get message history:', error);
+    throw error;
+  }
 }
